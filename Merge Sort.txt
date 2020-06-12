@@ -1,0 +1,718 @@
+#include <iostream>
+#include <time.h>
+using namespace std;
+
+class Node {
+public:
+	int value;
+	Node* next;
+	Node* previous;
+	Node(int i) { value = i; next = previous = nullptr; }
+	Node() { next = previous = nullptr; }
+};
+
+class DoublyLinkedList {
+public:
+	Node* head;
+	Node* tail;
+	DoublyLinkedList() { head = tail = nullptr; }
+	void makeRandomList(int m, int n);
+	void printForward();
+	void printBackward();
+
+
+	void sort();//sort all values based on frequency in ascending order.
+	 //In case of ties, the smaller values will appear earlier
+	//Example:  for list with values  7 6 12 4 33 12 6 6 7
+	//sorted results: 4 33 7 7 12 12 6 6 6
+
+
+
+	void merge(DoublyLinkedList& L);
+	/*
+	Given an already sorted DoublyLinkedList (i.e., the result of HW1) , take
+	another unsorted list L as function argument, and merge L into the current
+	list to form a single sorted DoublyLinkedList.  The result of merge is a sorted list.
+	You are not allowed to invoke sort() in HW1 in your implementation of merge.
+	*/
+
+	void remove(int m, int n);
+	/*
+	Given an already sorted DoublyLinkedList (i.e., the result of the HW1),
+	remove n times of value m from the DoublyLinkedList.
+	If n is more than the total number of m's in the DoublyLinkedList,
+	then remove all m's from the list.
+	If m does not exist in the list, then do nothing.
+	The result of remove will be a sorted list.
+	You are not allowed to invoke sort() in HW1 in your implementation of remove.
+	*/
+};
+
+void DoublyLinkedList::sort() {
+
+	//selection sort
+	//if the list have 0 or 1 element
+	if (!head || !(head->next)) return;
+	Node* p1 = head, * p2;
+	int min;
+	Node* p_min;
+	while (p1) {
+		min = p1->value;
+		p_min = p1;
+		p2 = p1->next;
+		while (p2) {//This loop will find the minimum value node from
+			//the node pointed by p1 until the end of the linked list
+			if (p2->value < min) {
+				min = p2->value;
+				p_min = p2;
+			}
+			p2 = p2->next;
+		}
+		//Swap the values at nodes pointed by p1 and p_min
+		p_min->value = p1->value;
+		p1->value = min;
+		p1 = p1->next;
+	}
+
+	Node* marker = head;
+	while (marker->next != nullptr) {
+		//find boundary of different numbers
+		if (marker->value == marker->next->value) {
+			marker = marker->next;
+		}
+		//when we find the boundary 
+		else if (marker->value != marker->next->value) {
+			int cnt1 = 1;
+			int cnt2 = 1;
+			Node* cur1 = marker;
+			Node* cur2 = marker->next;
+			Node* cur1Beg = cur1;
+			Node* cur2End = cur2;
+			//count the frequency of current 2 parts
+			while (cur1Beg->previous != nullptr && cur1->value == cur1Beg->previous->value) {
+				cnt1 = cnt1 + 1;
+				cur1Beg = cur1Beg->previous;
+			}
+			while (cur2End->next != nullptr && cur2->value == cur2End->next->value) {
+				cnt2 = cnt2 + 1;
+				cur2End = cur2End->next;
+			}
+			//when cnt1 is bigger than cnt2 swap to adjacent parts
+			if (cnt1 > cnt2) {
+				//swap two parts
+				if (cur1Beg == head) {
+					cur2End->next->previous = cur1;
+					cur1->next = cur2End->next;
+					cur2->previous = nullptr;
+					cur1Beg->previous = cur2End;
+					cur2End->next = cur1Beg;
+					head = cur2;
+				}
+				else if (cur2End == tail) {
+					cur1Beg->previous->next = cur2;
+					cur2->previous = cur1Beg->previous;
+					cur1->next = nullptr;
+					cur1Beg->previous = cur2End;
+					cur2End->next = cur1Beg;
+					tail = cur1;
+				}
+				else if (cur1Beg != head && cur2End != tail) {
+					Node* temp = cur1Beg->previous;
+					cur2End->next->previous = cur1;
+					cur1->next = cur2End->next;
+					temp->next = cur2;
+					cur2->previous = temp;
+					cur1Beg->previous = cur2End;
+					cur2End->next = cur1Beg;
+				}
+				//we need let marker be head after every swap operation
+				marker = head;
+			}
+			//when cur1 <= cnt2, set marker to right place for further swap
+			else if (cnt1 <= cnt2) {
+				marker = cur2End;
+			}
+		}
+	}
+}
+
+void DoublyLinkedList::merge(DoublyLinkedList& L) {
+	//sort the new coming doublylinked list by same numble
+	Node* curEnd = L.head;
+	Node* curEndNext = curEnd->next;
+	Node* findSame = curEnd->next;
+	//find the same num of curEnd and put them together
+	while (curEndNext != nullptr) {
+		while (findSame != nullptr) {
+			if (findSame->value == curEnd->value && findSame == curEndNext) {
+				curEnd = findSame;
+				curEndNext = curEnd->next;
+				if (curEndNext == nullptr) {
+					curEndNext = curEnd;
+				}
+			}
+			else if (findSame->value == curEnd->value && findSame == L.tail) {
+				findSame->previous->next = nullptr;
+				L.tail = findSame->previous;
+				curEnd->next = findSame;
+				curEndNext->previous = findSame;
+				findSame->previous = curEnd;
+				findSame->next = curEndNext;
+				curEnd = findSame;
+			}
+			else if (findSame->value == curEnd->value) {
+				findSame->previous->next = findSame->next;
+				findSame->next->previous = findSame->previous;
+				curEnd->next = findSame;
+				curEndNext->previous = findSame;
+				findSame->previous = curEnd;
+				findSame->next = curEndNext;
+				curEnd = findSame;
+			}
+			findSame = findSame->next;
+		}
+		curEnd = curEnd->next;
+		curEndNext = curEndNext->next;
+		if (curEnd != nullptr) {
+			findSame = curEnd->next;
+		}
+	}
+	//insert different group of number and sort it again by frequence
+	Node* L_freqcnt = L.head;
+	while (L_freqcnt != nullptr) {
+		//count current set of number
+		int curfreq = 1;
+		while (L_freqcnt->next != nullptr) {
+			if (L_freqcnt->value != L_freqcnt->next->value) {
+				break;
+			}
+			else {
+				curfreq = curfreq + 1;
+				L_freqcnt = L_freqcnt->next;
+			}
+		}
+		//determine that whether the d1 have the number that need be insert of d2
+		int curd2Num = L_freqcnt->value;
+		Node* checker = head;
+		bool h = 0;
+		while (checker != nullptr) {
+			if (checker->value == curd2Num) {
+				h = 1;
+				break;
+			}
+			else { checker = checker->next; }
+		}
+		//ensure the number set's begin and end
+		Node* insertSetEnd = L_freqcnt;
+		L_freqcnt = L_freqcnt->next;
+		Node* insertSetBeg = insertSetEnd;
+		for (int c = 0; c < curfreq - 1; c++) {
+			insertSetBeg = insertSetBeg->previous;
+		}
+		//process 2 condition separately
+		if (h == 0) {//if current number set is not included in d1
+			//if new number set should be the first part of d1
+			Node* ref = head;
+			int v2 = ref->value;
+			int f2 = 1;
+			while (ref->next != nullptr) {
+				if (ref->value != ref->next->value) {
+					break;
+				}
+				else {
+					f2 = f2 + 1;
+					ref = ref->next;
+				}
+			}
+			if ((f2 > curfreq) || (f2 == curfreq && v2 > curd2Num)) {
+				if (insertSetEnd == L.tail) {
+					insertSetEnd->next = head;
+					head->previous = insertSetEnd;
+					head = insertSetBeg;
+				}
+				else {
+					insertSetEnd->next->previous = nullptr;
+					L.head = insertSetEnd->next;
+					head->previous = insertSetEnd;
+					insertSetEnd->next = head;
+					head = insertSetBeg;
+				}
+				continue;
+			}
+			//if new number set should be the last part of d1
+			ref = tail;
+			int v1 = ref->value;
+			int f1 = 1;
+			while (ref->previous != nullptr) {
+				if (ref->value != ref->previous->value) {
+					break;
+				}
+				else {
+					f1 = f1 + 1;
+					ref = ref->previous;
+				}
+			}
+			if ((f1 < curfreq) || (f1 == curfreq && v1 < curd2Num)) {
+				if (insertSetEnd == L.tail) {
+					tail->next = insertSetBeg;
+					insertSetBeg->previous = tail;
+					tail = insertSetEnd;
+				}
+				else {
+					insertSetEnd->next->previous = nullptr;
+					tail->next = insertSetBeg;
+					insertSetBeg->previous = tail;
+					insertSetEnd->next = nullptr;
+					tail = insertSetEnd;
+				}
+				continue;
+			}
+			//insert new number set in the middle of d1
+			Node* curBoundry = head;
+			while (curBoundry != nullptr) {
+				while (curBoundry->next != nullptr) {
+					if (curBoundry->value != curBoundry->next->value) { break; }
+					else {
+						curBoundry = curBoundry->next;
+					}
+				}
+				if (curBoundry->next == nullptr) { break; }
+				Node* ref1 = curBoundry;
+				Node* ref2 = curBoundry->next;
+				v1 = ref1->value;
+				v2 = ref2->value;
+				f1 = 1;
+				f2 = 1;
+				while (ref1->previous != nullptr) {
+					if (ref1->value != ref1->previous->value) {
+						break;
+					}
+					else {
+						f1 = f1 + 1;
+						ref1 = ref1->previous;
+					}
+				}
+				while (ref2->next != nullptr) {
+					if (ref2->value != ref2->next->value) {
+						break;
+					}
+					else {
+						f2 = f2 + 1;
+						ref2 = ref2->next;
+					}
+				}
+				bool check = (f1 < curfreq && f2 == curfreq && curd2Num < v2) || (f1 == curfreq && v1<curd2Num && f2>curfreq) || (f1 == curfreq && f2 == curfreq && v1<curd2Num && v2>curd2Num) || (f1<curfreq && f2>curfreq);
+				if (check) {
+					if (insertSetEnd == L.tail) {
+						curBoundry->next->previous = insertSetEnd;
+						insertSetEnd->next = curBoundry->next;
+						curBoundry->next = insertSetBeg;
+						insertSetBeg->previous = curBoundry;
+					}
+					else {
+						L.head = insertSetEnd->next;
+						insertSetEnd->next->previous = nullptr;
+						curBoundry->next->previous = insertSetEnd;
+						insertSetEnd->next = curBoundry->next;
+						curBoundry->next = insertSetBeg;
+						insertSetBeg->previous = curBoundry;
+					}
+					break;
+				}
+				//if this boundary don't fit for any insert condition find next boundary
+				curBoundry = curBoundry->next;
+			}
+			continue;
+		}
+		if (h == 1) {//if current number set is included in d1
+			Node* finder = tail;
+			while (finder->value != curd2Num) {
+				finder = finder->previous;
+			}
+			//if finder is d1's tail
+			if (finder == tail) {
+				if (insertSetEnd == L.tail) {
+					finder->next = insertSetBeg;
+					insertSetBeg->previous = finder;
+					tail = insertSetEnd;
+					L_freqcnt = L_freqcnt->next;
+				}
+				else if(insertSetEnd != L.tail){
+					L.head = insertSetEnd->next;
+					insertSetEnd->next->previous= nullptr;
+					finder->next = insertSetBeg;
+					insertSetBeg->previous = finder;
+					insertSetEnd->next = nullptr;
+					tail = insertSetEnd;
+					L_freqcnt = L_freqcnt->next;
+				}
+				continue;
+			}
+			//if finder is not d1's tail
+			else {
+				//insert number set
+				if (insertSetEnd == L.tail) {
+					finder->next->previous = insertSetEnd;
+					insertSetEnd->next = finder->next;
+					finder->next = insertSetBeg;
+					insertSetBeg->previous = finder;
+				}
+				else {
+					finder->next->previous = insertSetEnd;
+					insertSetEnd->next->previous = nullptr;
+					L.head = insertSetEnd->next;
+					insertSetEnd->next = finder->next;
+					finder->next = insertSetBeg;
+					insertSetBeg->previous = finder;
+				}
+				//sort by freqence
+				int growthFreq = 0;
+				int sumFreq;
+				while (insertSetBeg->previous != nullptr) {
+					if (insertSetBeg->value != insertSetBeg->previous->value) {
+						break;
+					}
+					else {
+						growthFreq = growthFreq + 1;
+						insertSetBeg = insertSetBeg->previous;
+					}
+				}
+				sumFreq = curfreq + growthFreq;
+				//find appropriate boundary and move current number set
+				Node* curBoundary2 = insertSetEnd->next;
+				while (curBoundary2 != nullptr) {
+					while (curBoundary2->next != nullptr) {
+						if (curBoundary2->value != curBoundary2->next->value) { break; }
+						else {
+							curBoundary2 = curBoundary2->next;
+						}
+					}
+					//if we need put current number set to the end of d1
+					if (curBoundary2 == tail) {
+						Node* ref1 = curBoundary2;
+						int v1 = ref1->value;
+						int f1 = 1;
+						while (ref1->previous != nullptr) {
+							if (ref1->value != ref1->previous->value) {
+								break;
+							}
+							else {
+								f1 = f1 + 1;
+								ref1 = ref1->previous;
+							}
+						}
+						if ((f1 == sumFreq && v1 < curd2Num) || (f1 < sumFreq)) {
+							if (insertSetBeg == head) {
+								head = insertSetEnd->next;
+								tail = insertSetEnd;
+								insertSetEnd->next->previous = nullptr;
+								insertSetEnd->next = nullptr;
+								curBoundary2->next = insertSetBeg;
+								insertSetBeg->previous = curBoundary2;
+							}
+							else {
+								insertSetBeg->previous->next = insertSetEnd->next;
+								insertSetEnd->next->previous = insertSetBeg->previous;
+								tail = insertSetEnd;
+								curBoundary2->next = insertSetBeg;
+								insertSetBeg->previous = curBoundary2;
+								insertSetEnd->next = nullptr;
+							}
+							break;
+						}
+					}
+					//if we need put current number set to the mid of d1
+					else {
+						Node* ref1 = curBoundary2;
+						Node* ref2 = curBoundary2->next;
+						int v1 = ref1->value;
+						int v2 = ref2->value;
+						int f1 = 1;
+						int f2 = 1;
+						while (ref1->previous != nullptr) {
+							if (ref1->value != ref1->previous->value) {
+								break;
+							}
+							else {
+								f1 = f1 + 1;
+								ref1 = ref1->previous;
+							}
+						}
+						while (ref2->next != nullptr) {
+							if (ref2->value != ref2->next->value) {
+								break;
+							}
+							else {
+								f2 = f2 + 1;
+								ref2 = ref2->next;
+							}
+						}
+						bool check2 = (f1 < sumFreq && f2 == sumFreq && curd2Num < v2) || (f1 == sumFreq && v1<curd2Num && f2>sumFreq) || (f1 == sumFreq && f2 == sumFreq && v1<curd2Num && v2>curd2Num) || (f1<sumFreq && f2>sumFreq);
+						if (check2) {
+							if (insertSetBeg == head) {
+								head = insertSetEnd->next;
+								curBoundary2->next->previous = insertSetEnd;
+								insertSetEnd->next = curBoundary2->next;
+								head->previous = nullptr;
+								curBoundary2->next = insertSetBeg;
+								insertSetBeg->previous = curBoundary2;
+							}
+							else {
+								insertSetBeg->previous->next = insertSetEnd->next;
+								insertSetEnd->next->previous = insertSetBeg->previous;
+								curBoundary2->next->previous = insertSetEnd;
+								insertSetBeg->previous = curBoundary2;
+								insertSetEnd->next = curBoundary2->next;
+								curBoundary2->next = insertSetBeg;
+							}
+							break;
+						}
+					}
+					curBoundary2 = curBoundary2->next;
+				}
+
+			}
+			continue;
+		}
+	}
+
+}
+
+void DoublyLinkedList::remove(int m, int n) {
+	//search the number need be deleted from the list begin at its head
+	Node* finder = head;
+	bool h = 0;
+	while (finder != nullptr) {
+		if (finder->value == m) {
+			h = 1;
+			break;
+		}
+		else {
+			finder = finder->next;
+		}
+	}
+	//if the number is exist in the list
+	if (h == 1) {
+		//count the freqence of current number set
+		int freq_cnt = 1;
+		Node* cntfreq = finder;
+		while (cntfreq->next != nullptr) {
+			if (cntfreq->value == cntfreq->next->value) {
+				freq_cnt = freq_cnt + 1;
+				cntfreq = cntfreq->next;
+			}
+			else { break; }
+		}
+		//the n is equal or greater than frequence of current number set, then remove all current number from list
+		if (freq_cnt <= n) {
+			Node* curBeg = finder;
+			Node* curEnd = cntfreq;
+			//when the set of number is entire list
+			if (curBeg == head && curEnd == tail) {
+				head = nullptr;
+				tail = nullptr;
+			}
+			//when the begin of set is head
+			else if (curBeg == head) {
+				head = curEnd->next;
+				head->previous = nullptr;
+				curEnd->next = nullptr;
+			}
+			//when the end of set is tail
+			else if (curEnd == tail) {
+				tail = curBeg->previous;
+				tail->next = nullptr;
+				curBeg->previous = nullptr;
+			}
+			else {
+				curBeg->previous->next = curEnd->next;
+				curEnd->next->previous = curBeg->previous;
+				curBeg->previous = nullptr;
+				curEnd->next = nullptr;
+			}
+		}
+		//the n is less than frequence of current number set: then remove n times current number from list -> put rest part to appropriate place
+		else if (freq_cnt > n) {
+			//Decide the remove range and re-sort range
+			Node* removeBeg = finder;
+			Node* removeEnd = finder;
+			Node* curBeg;
+			Node* curEnd = cntfreq;
+			
+			for (int h = 0; h < n - 1; h++) {
+				removeEnd = removeEnd->next;
+			}
+			curBeg = removeEnd->next;
+			int curNum = curBeg->value;
+			//if the remove-set begin is head, just remove remove-set, cuz it must be the first in this condition
+			if (removeBeg == head) {
+				head = curBeg;
+				curBeg->previous = nullptr;
+				removeEnd->next = nullptr;
+			}
+			//if the remove-set is not the head: remove remove-set -> put rest part to appropriate palce
+			else {
+				//remove remove-set
+				removeBeg->previous->next = curBeg;
+				curBeg->previous = removeBeg->previous;
+				removeBeg->previous = nullptr;
+				removeEnd->next = nullptr;
+				//put rest part to appropriate place
+				int restfreq = 1;
+				Node* rest_cnt = curBeg;
+				while (rest_cnt != curEnd) {
+					restfreq = restfreq + 1;
+					rest_cnt = rest_cnt->next;
+				}
+				Node* curBoundary2 = curBeg->previous;
+				while (curBoundary2 != nullptr) {
+					while (curBoundary2->previous != nullptr) {
+						if (curBoundary2->value != curBoundary2->previous->value) { break; }
+						else {
+							curBoundary2 = curBoundary2->previous;
+						}
+					}
+					//if we need put current number set to the begin of list
+					if (curBoundary2 == head) {
+						Node* ref2 = curBoundary2;
+						int v2 = ref2->value;
+						int f2 = 1;
+						while (ref2->next != nullptr) {
+							if (ref2->value != ref2->next->value) {
+								break;
+							}
+							else {
+								f2 = f2 + 1;
+								ref2 = ref2->next;
+							}
+						}
+						if ((f2 > restfreq) || (f2 == restfreq && v2 > curNum)) {
+							if (curEnd == tail) {
+								tail = curBeg->previous;
+								head = curBeg;
+								tail->next = nullptr;
+								head->previous = nullptr;
+								curEnd->next = curBoundary2;
+								curBoundary2->previous = curEnd;
+							}
+							else {
+								head = curBeg;
+								curBeg->previous->next = curEnd->next;
+								curEnd->next->previous = curBeg->previous;
+								curBeg->previous = nullptr;
+								curEnd->next = curBoundary2;
+								curBoundary2->previous = curEnd;
+							}
+							break;
+						}
+					}
+					//if we need put current number set to the mid of list
+					else {
+						Node* ref1 = curBoundary2->previous;
+						Node* ref2 = curBoundary2;
+						int v1 = ref1->value;
+						int v2 = ref2->value;
+						int f1 = 1;
+						int f2 = 1;
+						while (ref1->previous != nullptr) {
+							if (ref1->value != ref1->previous->value) {
+								break;
+							}
+							else {
+								f1 = f1 + 1;
+								ref1 = ref1->previous;
+							}
+						}
+						while (ref2->next != nullptr) {
+							if (ref2->value != ref2->next->value) {
+								break;
+							}
+							else {
+								f2 = f2 + 1;
+								ref2 = ref2->next;
+							}
+						}
+						bool check2 = (f1 < restfreq && f2 == restfreq && curNum < v2) || (f1 == restfreq && v1<curNum && f2>restfreq) || (f1 == restfreq && f2 == restfreq && v1<curNum && v2>curNum) || (f1<restfreq && f2>restfreq);
+						if (check2) {
+							if (curEnd == tail) {
+								tail = curBeg->previous;
+								tail->next = nullptr;
+								curBoundary2->previous->next = curBeg;
+								curBeg->previous = curBoundary2->previous;
+								curEnd->next = curBoundary2;
+								curBoundary2->previous = curEnd;
+							}
+							else {
+								curBeg->previous->next = curEnd->next;
+								curEnd->next->previous = curBeg->previous;
+								curBoundary2->previous->next = curBeg;
+								curBeg->previous = curBoundary2->previous; 
+								curEnd->next = curBoundary2;
+								curBoundary2->previous = curEnd;
+							}
+							break;
+						}
+					}
+					curBoundary2 = curBoundary2->previous;
+				}
+
+			}
+		}
+	}
+}
+
+void DoublyLinkedList::makeRandomList(int m, int n) {
+
+	for (int i = 0; i < m; i++) {
+		Node* p1 = new Node(rand() % n);
+		p1->previous = tail;
+		if (tail != nullptr) tail->next = p1;
+		tail = p1;
+		if (head == nullptr) head = p1;
+	}
+}
+
+void DoublyLinkedList::printForward() {
+	cout << endl;
+	Node* p1 = head;
+	while (p1 != nullptr) {
+		cout << p1->value << " ";
+		p1 = p1->next;
+	}
+}
+
+void DoublyLinkedList::printBackward() {
+	cout << endl;
+	Node* p1 = tail;
+	while (p1 != nullptr) {
+		cout << p1->value << " ";
+		p1 = p1->previous;
+	}
+}
+
+int main() {
+	//srand(time(0));
+	DoublyLinkedList d1, d2;
+	d1.makeRandomList(50, 20);
+	d1.printForward();
+	d1.printBackward();
+
+	d1.sort();
+	d1.printForward();
+	d1.printBackward();
+
+	d2.makeRandomList(50, 20);
+	d2.printForward();
+	d2.printBackward();
+
+	d1.merge(d2);
+	d1.printForward();
+	d1.printBackward();
+
+	d1.remove(13, 3);
+	d1.printForward();
+	d1.printBackward();
+	getchar();
+	getchar();
+	return 0;
+}

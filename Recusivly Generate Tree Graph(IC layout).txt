@@ -1,0 +1,207 @@
+#include<iostream>
+#include<windows.h>
+#include <math.h>    
+#include <algorithm>   /* pow */
+
+using namespace std;
+
+void gotoxy(int x, int y)
+{
+	COORD coord;
+	coord.X = x;
+	coord.Y = y;
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}
+
+void gotoxy_plotHorizontalLine(int x, int y)
+{
+	COORD coord;
+	coord.X = x;
+	coord.Y = y;
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+	cout << "-";
+}
+
+void gotoxy_plotVerticalLine(int x, int y)
+{
+	COORD coord;
+	coord.X = x;
+	coord.Y = y;
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+	cout << "|";
+}
+
+void gotoxy_plotNode(int x, int y)
+{
+	COORD coord;
+	coord.X = x;
+	coord.Y = y;
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+	cout << "o";
+}
+
+void plot(int n, int x, int y) {
+	int x1 = -1;
+	int x2 = -1;
+	int y1 = -1;
+	int y2 = -1;
+	if (n == 0) return;
+	else if (n <= 3) {
+		if (n == 3) {
+			x1 = x - 2;
+			x2 = x + 2;
+			y1 = y;
+			y2 = y;
+		}
+		else if (n == 2) {
+			x1 = x;
+			x2 = x;
+			y1 = y + 2;
+			y2 = y - 2;
+		}
+		else if (n == 1) {
+			//do nothing
+		}
+	}
+	else {//n bigger than 3
+		if (n % 2 == 0) {
+			if (n / 2 == 2) {
+				y1 = y + 3;
+				y2 = y - 3;
+				x1 = x;
+				x2 = x;
+			}
+			else {
+				int temp = pow(2, n / 2 - 3);
+				y1 = y + 6 * temp;
+				y2 = y - 6 * temp;
+				x1 = x;
+				x2 = x;
+			}
+		}
+		else if (n % 2 == 1) {
+			if (n / 2 == 2) {
+				y1 = y;
+				y2 = y;
+				x1 = x + 3;
+				x2 = x - 3;
+			}
+			else {
+				int temp = pow(2, n / 2 - 3);
+				y1 = y;
+				y2 = y;
+				x1 = x + 6 * temp;
+				x2 = x - 6 * temp;
+			}
+		}
+	}
+	plot(n - 1, x1, y1);
+	plot(n - 1, x2, y2);
+	//plot the node
+	gotoxy_plotNode(x, y);
+	//then connect the line with next node
+	if (n % 2 == 0) {//draw vertical line
+		int lineNum;
+		if (n == 2) {
+			lineNum = 1;
+		}
+		else if (n == 4) {
+			lineNum = 2;
+		}
+		else {
+			int temp = pow(2, n / 2 - 3);
+			lineNum = temp * 5 + (temp - 1);
+		}
+		int curX1 = x;
+		int curY1 = y;
+		for (int i = 0; i < lineNum; i++) {
+			curY1++;
+			gotoxy_plotVerticalLine(curX1, curY1);
+		}
+		int curX2 = x;
+		int curY2 = y;
+		for (int i = 0; i < lineNum; i++) {
+			curY2--;
+			gotoxy_plotVerticalLine(curX2, curY2);
+		}
+	}
+	else if (n % 2 == 1) {//draw vertical line
+		int lineNum;
+		if (n == 3) {
+			lineNum = 1;
+		}
+		else if (n == 5) {
+			lineNum = 2;
+		}
+		else {
+			int temp = pow(2, n / 2 - 3);
+			lineNum = temp * 5 + (temp - 1);
+		}
+		int curX1 = x;
+		int curY1 = y;
+		for (int i = 0; i < lineNum; i++) {
+			curX1--;
+			gotoxy_plotHorizontalLine(curX1, curY1);
+		}
+		int curX2 = x;
+		int curY2 = y;
+		for (int i = 0; i < lineNum; i++) {
+			curX2++;
+			gotoxy_plotHorizontalLine(curX2, curY2);
+		}
+	}
+}
+
+int main() {
+	int treeLevel = 9;
+	int x = 0;
+	int y = 0;
+	int maxY;
+	//calculate the max Y axis coordinate
+	if (treeLevel <= 3) {
+		if (treeLevel == 1) maxY = 2;
+		else if (treeLevel == 2 || treeLevel == 3) maxY = 5 + 1;
+	}
+	else {
+		maxY = 6 * pow(2, treeLevel / 2 - 1);
+	}
+	// cout << "input tree level: ";
+	// cin >> treeLevel;
+	// cout << endl;
+	//first we need to calculate the coordinate of root
+	if (treeLevel < 1) {
+		cout << "we can't generate such tree." << endl;
+		return 1;
+	}
+	else if (treeLevel == 1) { x = 0; y = 0; }
+	else {
+		int curLevel = 2;
+		while (curLevel <= treeLevel) {
+			if (curLevel / 2 == 1 && curLevel % 2 == 0) {
+				y += 2;
+			}
+			else if (curLevel / 2 == 1 && curLevel % 2 == 1) {
+				x += 2;
+			}
+			else if (curLevel / 2 == 2 && curLevel % 2 == 0) {
+				y += 3;
+			}
+			else if (curLevel / 2 == 2 && curLevel % 2 == 1) {
+				x += 3;
+			}
+			else if (curLevel % 2 == 0) {
+				int temp = pow(2, curLevel / 2 - 3);
+				y += 6 * temp;
+			}
+			else if (curLevel % 2 == 1) {
+				int temp = pow(2, curLevel / 2 - 3);
+				x += 6 * temp;
+			}
+			curLevel++;
+		}
+	}
+	//cout << "root is " << x << " " << y << endl;
+	//plot tree
+	plot(treeLevel, x, y);
+	gotoxy(0, maxY);
+}

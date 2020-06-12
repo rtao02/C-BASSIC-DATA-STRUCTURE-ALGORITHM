@@ -1,0 +1,491 @@
+//CIS554 HW6   Due: 11:59PM, Friday, Nov. 8.
+#include <iostream>
+#include <memory>
+#include <math.h>
+
+using namespace std;
+
+class node {
+public:
+	int value;
+	shared_ptr<node> right;
+	shared_ptr<node> l_child;
+	shared_ptr<node> r_child;
+	node() {}
+	node(int i) { value = i; }
+};
+
+class tree {
+public:
+	shared_ptr<node> root;
+	int level;
+	tree() { level = 0; }
+
+	//Implement all member functions below
+	tree(int n);//constructor for n-level tree
+	//and initilize values as shown in the diagram; 0, 1, 2, ...
+	//Note that root node is at level 1 and its value will be initialized to 0
+
+	tree(const tree& T);//copy constructor
+	~tree();//destructor
+	tree(tree&& T); //move constructor
+
+	tree(const initializer_list<int>& V);//The first number in V is tree level;
+	//the rest are values from top to bottom and from left to right
+	//For example, to create the tree with n=3 in the diagram,
+	//tree T1 = {3, 0,1,2,3,4,5,6}; //where the first 3 is tree level, and the rest are values
+
+	void operator= (const tree& R);//L-value operator=
+	void operator= (tree&& R); //R-value operator=
+
+
+	tree ThreeTimes(); //return a tree with all node value being three times
+	friend ostream& operator<<(ostream& str, const tree& T);
+
+	int sum(shared_ptr<node> p);//sum of node values in sub-tree rooted at p
+	void delete_level(int i); // Delete nodes at level i. Some nodes at level(s) higher
+	//than i will also be deleted accordingly. As described in class.  (Also see the
+	//example in the main function.)
+
+	shared_ptr<node> find(int i); //find the first node with value i and return
+	//its address; if not found, return nullptr;
+};
+
+int tree::sum(shared_ptr<node> p) {
+	int level = 0;
+	int sum = 0;
+	shared_ptr<node> temp = p;
+	while (temp != nullptr) {//make sure the level of subtree
+		level++;
+		temp = temp->l_child;
+	}
+	for (int i = 0; i < level; i++) {
+		int nodeN = pow(2, i);
+		temp = p;
+		for (int j = 0; j < nodeN; j++) {
+			sum += temp->value;
+			temp = temp->right;
+		}
+		p = p->l_child;
+	}
+	return sum;
+}
+
+shared_ptr<node> tree::find(int i) {
+	shared_ptr<node> temp = root;
+	if (temp->value == i) return temp;
+	temp = temp->right;
+	while (temp != root) {
+		if (temp->value == i) return temp;
+		temp = temp->right;
+	}
+	if (temp == root) return nullptr;
+}
+
+void tree::delete_level(int i) {// need be complete will not delete root
+	if (i > level) return;//tree have no this level -> do nothing
+	int nodeN0 = pow(2, i - 2);//i-1 level's node
+	int nodeN2 = pow(2, i);//i+1 level's node
+	//find first node in i-1 level
+	shared_ptr<node> firstN0 = root;
+	if (i == 2) {
+		firstN0 = root;
+	}
+	else if (i > 2) {
+		int move4firstN0 = 0;
+		for (int l = 0; l < i - 2; l++) {
+			move4firstN0 += pow(2, l);
+		}
+		for (int m = 0; m < move4firstN0; m++) {//anchor first node of i-1 level
+			firstN0 = firstN0->right;
+		}
+	}
+	if (i == level) {//delete the last level
+		for (int d = 0; d < nodeN0 - 1; d++) {
+			firstN0->l_child.reset();
+			firstN0->r_child.reset();
+			firstN0 = firstN0->right;
+		}
+		firstN0->l_child.reset();
+		firstN0->r_child.reset();
+		firstN0->right = root;
+	}
+	else {
+		shared_ptr<node> firstN2 = firstN0->l_child->l_child;
+		for (int d = 0; d < nodeN0 - 1; d++) {
+			firstN0->l_child = firstN0->l_child->l_child;
+			firstN0->r_child = firstN0->r_child->l_child;
+			firstN0 = firstN0->right;
+		}
+		firstN0->l_child = firstN0->l_child->l_child;
+		firstN0->r_child = firstN0->r_child->l_child;
+		firstN0->right = firstN2;
+		int gap = 1;
+		int prelevel = i;
+		shared_ptr<node> upper1st = firstN2;
+		shared_ptr<node> upper2nd = upper1st->l_child;
+		shared_ptr<node> temp;
+		while (prelevel != level - 1) {
+			int jumpNum = pow(2, i - 1);
+			for (int s = 0; s < jumpNum - 1; s++) {//times-1 for jump
+				for (int f = 0; f < gap - 1; f++) {//find node need jump gap
+					upper1st = upper1st->right;
+				}
+				for (int j = 0; j < gap; j++) {
+					upper1st->right = upper1st->right->right;
+				}
+				temp = upper1st;
+				upper1st = upper1st->right;
+			}
+			for (int f = 0; f < gap - 1; f++) {//find node need jump gap
+				upper1st = upper1st->right;
+			}
+			upper1st->right = upper2nd;
+			upper1st = upper2nd;
+			upper2nd = upper2nd->l_child;
+			prelevel++;
+			gap = gap * 2;
+		}
+		int jumpNum = pow(2, i - 1);
+		
+		for (int s = 0; s < jumpNum - 1; s++) {//times-1 for jump
+			for (int f = 0; f < gap - 1; f++) {//find node need jump gap
+				upper1st = upper1st->right;
+			}
+			for (int j = 0; j < gap; j++) {//jump gap!!!
+				upper1st->right = upper1st->right->right;
+			}
+			temp = upper1st;
+			upper1st = upper1st->right;
+		}
+		for (int f = 0; f < gap - 1; f++) {//find node need jump gap
+			upper1st = upper1st->right;
+		}
+		upper1st->right = root;
+	}
+	level--;
+}
+
+tree tree::ThreeTimes() {
+	tree tempT;
+	tempT.level = level;
+	shared_ptr<node> temp = root;
+	tempT.root = make_shared<node>(temp->value * 3);
+	temp = temp->right;
+	shared_ptr<node> cur = tempT.root;
+	shared_ptr<node> pre = tempT.root;
+	//first of all, we creat a circle
+	for (int j = 2; j <= level; j++) {//j means level and start from second level
+		int nodeN = pow(2, j - 1);//make sure the number of this level's node
+		for (int k = 0; k < nodeN; k++) {//add nodeN nodes
+			cur = make_shared<node>(temp->value * 3);
+			temp = temp->right;
+			pre->right = cur;
+			pre = cur;
+		}
+	}
+	pre->right = tempT.root;
+	pre = nullptr;
+	cur = nullptr;
+	//then we connect l_child and r_child
+	cur = tempT.root;
+	int curvalue = 0;
+	for (int l = 1; l < level; l++) {//connecr LR level by level
+		int nodeN = pow(2, l - 1);//this level's node number
+		for (int n = 0; n < nodeN; n++) {
+			//find LR child
+			shared_ptr<node> L = cur;
+			shared_ptr<node> R = cur;
+			int move4L = curvalue * 2 + 1 - curvalue;
+			int move4R = curvalue * 2 + 2 - curvalue;
+			for (int p = 0; p < move4L; p++) {//find l child
+				L = L->right;
+			}
+			for (int p = 0; p < move4R; p++) {//find r child
+				R = R->right;
+			}
+			cur->l_child = L;
+			cur->r_child = R;
+			cur = cur->right;
+			curvalue++;
+		}
+	}
+	cur = nullptr;
+	temp = nullptr;
+	return tempT;
+}
+
+tree::~tree(){//destructor
+	if (root == nullptr) return;
+	level = 0;
+	root->l_child.reset();
+	root->r_child.reset();
+	root->right.reset();
+	root.reset();
+}
+
+void tree::operator=(tree&& R) {//Rvalue operator=
+	level = R.level;
+	if (root != nullptr) {
+		//level = 0;
+		root->l_child.reset();
+		root->r_child.reset();
+		root->right.reset();
+		root.reset();
+	}
+	root = R.root;
+	R.root.reset();
+}
+
+tree::tree(tree&& T) {//move constructor
+	level = T.level;
+	if (root != nullptr) {
+		//level = 0;
+		root->l_child.reset();
+		root->r_child.reset();
+		root->right.reset();
+		root.reset();
+	}
+	root = T.root;
+	T.level = 0;
+	T.root.reset();
+}
+
+void tree::operator=(const tree& R) {//Lvalue operator=
+	level = R.level;
+	shared_ptr<node> temp = R.root;
+	root = make_shared<node>(temp->value);
+	temp = temp->right;
+	shared_ptr<node> cur = root;
+	shared_ptr<node> pre = root;
+	//first of all, we creat a circle
+	for (int j = 2; j <= level; j++) {//j means level and start from second level
+		int nodeN = pow(2, j - 1);//make sure the number of this level's node
+		for (int k = 0; k < nodeN; k++) {//add nodeN nodes
+			cur = make_shared<node>(temp->value);
+			temp = temp->right;
+			pre->right = cur;
+			pre = cur;
+		}
+	}
+	pre->right = root;
+	pre = nullptr;
+	cur = nullptr;
+	//then we connect l_child and r_child
+	cur = root;
+	int curvalue = 0;
+	for (int l = 1; l < level; l++) {//connecr LR level by level
+		int nodeN = pow(2, l - 1);//this level's node number
+		for (int n = 0; n < nodeN; n++) {
+			//find LR child
+			shared_ptr<node> L = cur;
+			shared_ptr<node> R = cur;
+			int move4L = curvalue * 2 + 1 - curvalue;
+			int move4R = curvalue * 2 + 2 - curvalue;
+			for (int p = 0; p < move4L; p++) {//find l child
+				L = L->right;
+			}
+			for (int p = 0; p < move4R; p++) {//find r child
+				R = R->right;
+			}
+			cur->l_child = L;
+			cur->r_child = R;
+			cur = cur->right;
+			curvalue++;
+		}
+	}
+	cur = nullptr;
+	temp = nullptr;
+}
+
+tree::tree(const tree& T) {//copy constructor
+	level = T.level;
+	shared_ptr<node> temp = T.root;
+	root = make_shared<node>(temp->value);
+	temp = temp->right;
+	shared_ptr<node> cur = root;
+	shared_ptr<node> pre = root;
+	//first of all, we creat a circle
+	for (int j = 2; j <= level; j++) {//j means level and start from second level
+		int nodeN = pow(2, j - 1);//make sure the number of this level's node
+		for (int k = 0; k < nodeN; k++) {//add nodeN nodes
+			cur = make_shared<node>(temp->value);
+			temp = temp->right;
+			pre->right = cur;
+			pre = cur;
+		}
+	}
+	pre->right = root;
+	pre = nullptr;
+	cur = nullptr;
+	//then we connect l_child and r_child
+	cur = root;
+	int curvalue = 0;
+	for (int l = 1; l < level; l++) {//connecr LR level by level
+		int nodeN = pow(2, l - 1);//this level's node number
+		for (int n = 0; n < nodeN; n++) {
+			//find LR child
+			shared_ptr<node> L = cur;
+			shared_ptr<node> R = cur;
+			int move4L = curvalue * 2 + 1 - curvalue;
+			int move4R = curvalue * 2 + 2 - curvalue;
+			for (int p = 0; p < move4L; p++) {//find l child
+				L = L->right;
+			}
+			for (int p = 0; p < move4R; p++) {//find r child
+				R = R->right;
+			}
+			cur->l_child = L;
+			cur->r_child = R;
+			cur = cur->right;
+			curvalue++;
+		}
+	}
+	cur = nullptr;
+	temp = nullptr;
+}
+
+tree::tree(const initializer_list<int>& V) {
+	level = *V.begin();
+	auto it = V.begin() + 1;
+	root = make_shared<node>(*it);
+	it++;
+	shared_ptr<node> cur = root;
+	shared_ptr<node> pre = root;
+	//first of all, we creat a circle
+	for (int j = 2; j <= level; j++) {//j means level and start from second level
+		int nodeN = pow(2, j - 1);//make sure the number of this level's node
+		for (int k = 0; k < nodeN; k++) {//add nodeN nodes
+			cur = make_shared<node>(*it);
+			it++;
+			pre->right = cur;
+			pre = cur;
+		}
+	}
+	pre->right = root;
+	pre = nullptr;
+	cur = nullptr;
+	//then we connect l_child and r_child
+	cur = root;
+	int curvalue = 0;
+	for (int l = 1; l < level; l++) {//connecr LR level by level
+		int nodeN = pow(2, l - 1);//this level's node number
+		for (int n = 0; n < nodeN; n++) {
+			//find LR child
+			shared_ptr<node> L = cur;
+			shared_ptr<node> R = cur;
+			int move4L = curvalue * 2 + 1 - curvalue;
+			int move4R = curvalue * 2 + 2 - curvalue;
+			for (int p = 0; p < move4L; p++) {//find l child
+				L = L->right;
+			}
+			for (int p = 0; p < move4R; p++) {//find r child
+				R = R->right;
+			}
+			cur->l_child = L;
+			cur->r_child = R;
+			cur = cur->right;
+			curvalue++;
+		}
+	}
+	cur = nullptr;
+}
+
+ostream& operator<<(ostream& str, const tree& T) {
+	str << T.root->value << " ";
+	shared_ptr<node> print = T.root->right;
+	while (print != T.root) {
+		str << print->value << " ";
+		print = print->right;
+	}
+	print = nullptr;
+	return str;
+}
+
+tree::tree(int i) {
+	level = i;
+	int value = 1;
+	root = make_shared<node>(0);
+	//root->l_child = nullptr;
+	shared_ptr<node> cur = root;
+	shared_ptr<node> pre = root;
+	//first of all, we creat a circle
+	for (int j = 2; j <= i; j++) {//j means level and start from second level
+		int nodeN = pow(2, j - 1);//make sure the number of this level's node
+		for (int k = 0; k < nodeN; k++) {//add nodeN nodes
+			cur = make_shared<node>(value);
+			pre->right = cur;
+			pre = cur;
+			value++;
+		}
+	}
+	pre->right = root;
+	pre = nullptr;
+	cur = nullptr;
+	//then we connect l_child and r_child
+	cur = root;
+	int curvalue = 0;
+	for (int l = 1; l < i; l++) {//connecr LR level by level
+		int nodeN = pow(2, l - 1);//this level's node number
+		for (int n = 0; n < nodeN; n++) {
+			//find LR child
+			shared_ptr<node> L = cur;
+			shared_ptr<node> R = cur;
+			int move4L = curvalue * 2 + 1 - curvalue;
+			int move4R = curvalue * 2 + 2 - curvalue;
+			for (int p = 0; p < move4L; p++) {//find l child
+				L = L->right;
+			}
+			for (int p = 0; p < move4R; p++) {//find r child
+				R = R->right;
+			}
+			cur->l_child = L;
+			cur->r_child = R;
+			cur = cur->right;
+			curvalue++;
+		}
+	}
+	cur = nullptr;
+}
+
+
+
+int main() {
+	
+	tree T1(3);
+
+	cout << T1 << endl; //will print 0 1 2 3 4 5 6
+	cout << T1.level << endl; // 3
+
+	tree T2 = { 4, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 };
+	cout << T2 << endl; //will print 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+	cout << T2.level << endl; // 4
+
+	tree T3(T2);
+	cout << T3 << endl; //will print 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+	cout << T3.level << endl; // 4
+
+	tree T4;
+	T4 = T3;
+	cout << T4 << endl; //will print 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+	cout << T4.level << endl; // 4
+
+	T4 = T3.ThreeTimes();
+	cout << T4 << endl;//will print 30 33 36 39 42 45 48 51 54 57 60 63 66 69 72
+	cout << T4.level << endl; // 4
+
+	T4.delete_level(4);
+	cout << T4 << endl;//will print 30 33 36 51 57 63 69
+	cout << T4.level << endl; // 3
+
+	cout << T3.sum(T3.find(12)) << endl; //will print 133
+
+	tree T5(5);
+	T5.delete_level(5);
+	cout << T5 << endl;
+
+	getchar();
+	getchar();
+	return 0;
+}
+
